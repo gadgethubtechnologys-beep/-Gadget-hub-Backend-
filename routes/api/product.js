@@ -211,6 +211,22 @@ router.delete('/delete/:id', auth, role.check(ROLES.Admin, ROLES.Merchant, ROLES
   }
 });
 
+// POST upload single image to Cloudinary
+router.post('/image/upload', auth, role.check(ROLES.Admin, ROLES.Merchant, ROLES.Member), async (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image) return res.status(400).json({ error: 'Image data is required.' });
+    if (!image.startsWith('data:image')) {
+      return res.status(400).json({ error: 'Invalid image format. Must be base64 data URI.' });
+    }
+    const upload = await cloudinary.uploader.upload(image, { folder: 'products' });
+    res.status(200).json({ success: true, imageUrl: upload.secure_url });
+  } catch (error) {
+    console.error('Error uploading image to Cloudinary:', error);
+    res.status(400).json({ error: 'Failed to upload image. Please try again.' });
+  }
+});
+
 // DELETE single image from Cloudinary by URL
 router.post('/image/delete', auth, role.check(ROLES.Admin, ROLES.Merchant, ROLES.Member), async (req, res) => {
   try {
