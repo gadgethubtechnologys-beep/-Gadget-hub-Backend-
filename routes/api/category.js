@@ -51,10 +51,31 @@ router.post('/add', auth, role.check(ROLES.Admin), async (req, res) => {
       return res.status(400).json({ error: 'You must enter description & name.' });
     }
 
+    // Normalize and upload image when base64 provided
     let imageUrl = null;
-    if (image && image.startsWith('data:image')) {
+    if (image && typeof image === 'string' && image.startsWith('data:image')) {
       const upload = await cloudinary.uploader.upload(image, { folder: 'categories' });
       imageUrl = upload.secure_url;
+    }
+
+    // Create a safe unique slug derived from name (avoid duplicate key errors)
+    const slugify = (s = '') =>
+      s
+        .toString()
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
+    const baseSlug = slugify(name || 'category');
+    let candidateSlug = baseSlug || `cat-${Date.now().toString().slice(-4)}`;
+    let i = 1;
+    // ensure uniqueness
+    while (await Category.exists({ slug: candidateSlug })) {
+      candidateSlug = `${baseSlug}-${i}`;
+      i += 1;
     }
 
     const category = new Category({
@@ -64,6 +85,7 @@ router.post('/add', auth, role.check(ROLES.Admin), async (req, res) => {
       isActive,
       subCategories,
       image: imageUrl,
+      slug: candidateSlug,
     });
 
     const data = await category.save();
@@ -75,6 +97,11 @@ router.post('/add', auth, role.check(ROLES.Admin), async (req, res) => {
     });
 
   } catch (err) {
+    // Duplicate key (slug) -> return friendly message
+    if (err && err.code === 11000) {
+      return res.status(400).json({ error: 'A category with a similar name/slug already exists. Please choose a different name.' });
+    }
+    console.error('Category add error:', err && err.message ? err.message : err);
     res.status(400).json({ error: 'Your request could not be processed. Please try again.' });
   }
 });
