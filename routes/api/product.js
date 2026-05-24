@@ -25,7 +25,15 @@ router.get('/', async (req, res) => {
       ? parseInt(req.query.skip)
       : ((parseInt(req.query.page) || 1) - 1) * limit;
 
-    const products = await Product.find({})
+    // Build filter object
+    const filter = {};
+    
+    // Filter by category if provided
+    if (req.query.category) {
+      filter.category = req.query.category;
+    }
+
+    const products = await Product.find(filter)
       .populate('category', 'name')
       .populate('subcategory', 'name')
       .limit(limit)

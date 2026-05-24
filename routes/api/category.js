@@ -166,11 +166,12 @@ router.put('/:id', auth, role.check(ROLES.Admin), async (req, res) => {
       }
     }
 
-    await Category.findByIdAndUpdate(categoryId, update, { new: true });
+    const updatedCategory = await Category.findByIdAndUpdate(categoryId, update, { new: true });
 
     res.status(200).json({
       success: true,
-      message: 'Category has been updated successfully!'
+      message: 'Category has been updated successfully!',
+      category: updatedCategory
     });
 
   } catch (error) {
