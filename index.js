@@ -1,3 +1,9 @@
+// Catch any unhandled promise rejections to prevent Node 18+ from killing the process
+// Must be registered BEFORE any async operations
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠ Unhandled Rejection (non-fatal):', reason && reason.message ? reason.message : reason);
+});
+
 require('dotenv').config();
 const express = require('express');
 const chalk = require('chalk');
@@ -20,35 +26,33 @@ app.use(
   })
 );
 
-// ✅ Enhanced CORS Configuration
+// ✅ CORS Configuration
+const PRODUCTION_ORIGINS = [
+  'https://admin.gadgethub.in',
+  'https://shop.gadgethub.in',
+  'https://api.gadgethub.in',
+  'https://www.gadgethub.in',
+  'https://gadgethub.in',
+  'https://gadget-hub-admin.vercel.app',
+  'https://gadget-hub-user.vercel.app',
+];
+
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:5173',
-      'http://127.0.0.1:3000',
-      'https://lux-varo-admin.vercel.app',
-      'https://lux-varo-user.vercel.app',
-      'https://lexvaro-admin.vercel.app',
-      'https://lexvaro-user.vercel.app',
-      // Production domains
-      'https://admin.lexvaro.in',
-      'https://shop.lexvaro.in',
-      'https://api.lexvaro.in',
-      'https://www.lexvaro.in',
-      'https://lexvaro.in'
-    ];
-
-    // Allow requests with no origin (mobile apps, Postman, server-to-server)
+    // Allow requests with no origin (Postman, mobile, server-to-server)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      // Deny other origins
-      callback(null, false);
+    // Allow ANY localhost / 127.0.0.1 port in development
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
     }
+
+    if (PRODUCTION_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Block everything else
+    callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -58,37 +62,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); // Handle preflight requests
-
-// Additional safety middleware to ensure CORS headers for allowed origins
-app.use((req, res, next) => {
-  const origin = req.get('origin');
-  const allowed = [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:5173',
-    'http://127.0.0.1:3000',
-    'https://lux-varo-admin.vercel.app',
-    'https://lux-varo-user.vercel.app',
-    'https://lexvaro-admin.vercel.app',
-    'https://lexvaro-user.vercel.app',
-    'https://admin.lexvaro.in',
-    'https://shop.lexvaro.in',
-    'https://api.lexvaro.in',
-    'https://www.lexvaro.in',
-    'https://lexvaro.in'
-  ];
-
-  if (origin && allowed.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
-  }
-
-  // Handle OPTIONS quickly
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
-  next();
-});
 
 // ✅ ROOT ROUTE (IMPORTANT FIX)
 app.get("/", (req, res) => {
@@ -101,8 +74,8 @@ app.get("/seed-admin", async (req, res) => {
     const User = require('./models/user');
     const { ROLES } = require('./constants');
     
-    const adminEmail = 'admin@lexvaro.com';
-    const adminPassword = 'LexvaroAdmin@2026';
+    const adminEmail = 'admin@gadgethub.in';
+    const adminPassword = 'GadgetHubAdmin@2026';
     
     // Delete existing admin if any
     await User.deleteOne({ email: adminEmail });
@@ -111,8 +84,8 @@ app.get("/seed-admin", async (req, res) => {
     const adminUser = new User({
       email: adminEmail,
       password: adminPassword,
-      firstName: 'Lexvaro',
-      lastName: 'Admin',
+      firstName: 'Gadget',
+      lastName: 'Hub Admin',
       role: ROLES.Admin
     });
     
@@ -180,14 +153,26 @@ app.get("/seed-data", async (req, res) => {
 });
 
 // Initialize DB connection
-setupDB();
+setupDB().catch(err => {
+  console.error('⚠ DB setup error (server will still run):', err.message || err);
+});
 
 // Configure Passport and Routes synchronously to prevent serverless race conditions
 require('./config/passport')(app);
 app.use(routes);
 
 // Local-only configuration (listening and seeding)
-if (!process.env.VERCEL) {
+if (process.env.VERCEL !== 'true') {
+  const PORT = process.env.PORT || 5002;
+  const HOST = process.env.HOST || '0.0.0.0';
+  app.listen(PORT, HOST, () => {
+    console.log(
+      `${chalk.green('✓')} ${chalk.blue(
+        `Server running locally on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`
+      )}`
+    );
+  });
+
   const seedLocalAdmin = async () => {
     try {
       // Small delay to ensure Mongoose connects first
@@ -196,8 +181,8 @@ if (!process.env.VERCEL) {
       const User = require('./models/user');
       const { ROLES } = require('./constants');
       
-      const adminEmail = 'admin@lexvaro.com';
-      const adminPassword = 'LexvaroAdmin@2026';
+      const adminEmail = 'admin@gadgethub.in';
+      const adminPassword = 'GadgetHubAdmin@2026';
       const existingAdmin = await User.findOne({ email: adminEmail });
 
       if (existingAdmin) {
@@ -209,8 +194,8 @@ if (!process.env.VERCEL) {
         const adminUser = new User({
           email: adminEmail,
           password: adminPassword,
-          firstName: 'Lexvaro',
-          lastName: 'Admin',
+          firstName: 'Gadget',
+          lastName: 'Hub Admin',
           role: ROLES.Admin
         });
         await adminUser.save();
@@ -223,15 +208,6 @@ if (!process.env.VERCEL) {
     }
   };
   seedLocalAdmin();
-
-  const PORT = process.env.PORT || 5002;
-  app.listen(PORT, "127.0.0.1", () => {
-    console.log(
-      `${chalk.green('✓')} ${chalk.blue(
-        `Server running locally on port ${PORT}`
-      )}`
-    );
-  });
 }
 
 module.exports = app;

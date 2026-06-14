@@ -53,8 +53,8 @@ const seedAdmin = async () => {
     await mongoose.connect(MONGO_URI);
     console.log('Connected to MongoDB.');
 
-    const adminEmail = 'admin@lexvaro.com';
-    const adminPassword = 'LexvaroAdmin@2026';
+    const adminEmail = 'admin@gadgethub.in';
+    const adminPassword = 'GadgetHubAdmin@2026';
     const existingAdmin = await User.findOne({ email: adminEmail });
 
     const salt = await bcrypt.genSalt(10);
@@ -74,9 +74,9 @@ const seedAdmin = async () => {
 
     const adminUser = new User({
       email: adminEmail,
-      password: adminPassword, // The user model pre-save hook will hash it, or if it doesn't, we should check. Wait, let's check user schema.
-      firstName: 'Lexvaro',
-      lastName: 'Admin',
+      password: adminPassword, // The user model pre-save hook will hash it, or if it doesn't, we should check.
+      firstName: 'Gadget',
+      lastName: 'Hub Admin',
       role: ROLES.Admin
     });
 
