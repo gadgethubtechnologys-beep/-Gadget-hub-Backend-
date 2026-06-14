@@ -49,12 +49,14 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    if (PRODUCTION_ORIGINS.includes(origin)) {
+if (
+      PRODUCTION_ORIGINS.includes(origin) ||
+      origin.endsWith('.vercel.app')
+    ) {
       return callback(null, true);
     }
 
-    // Block everything else
-    callback(null, false);
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
