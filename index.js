@@ -35,6 +35,8 @@ const PRODUCTION_ORIGINS = [
   'https://gadgethub.in',
   'https://gadget-hub-admin.vercel.app',
   'https://gadget-hub-user.vercel.app',
+  'https://gadget-hub-admin-seven.vercel.app',
+  'https://gadget-hub-frontend-five.vercel.app'
 ];
 
 const corsOptions = {
