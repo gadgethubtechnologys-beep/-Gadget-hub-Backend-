@@ -36,7 +36,12 @@ const PRODUCTION_ORIGINS = [
   'https://gadget-hub-admin.vercel.app',
   'https://gadget-hub-user.vercel.app',
   'https://gadget-hub-admin-seven.vercel.app',
-  'https://gadget-hub-frontend-five.vercel.app'
+  'https://gadget-hub-frontend-five.vercel.app',
+  'https://www.securezone.store',
+  'https://securezone.store',
+  'https://admin.securezone.store',
+  'https://gadget-hub-frontend.vercel.app',
+  'http://localhost:3000'
 ];
 
 const corsOptions = {
